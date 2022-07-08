@@ -191,7 +191,7 @@ class StoryMixin:
         reel = self.private_request(f"feed/user/{user_id}/story/", params=params).get("reel") or {}
         stories = []
         for item in reel.get("items", []):
-            stories.append(extract_story_v1(item))
+            stories.append(item)
         if amount:
             stories = stories[:int(amount)]
         return stories
