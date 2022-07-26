@@ -567,7 +567,7 @@ class MediaMixin:
         if amount:
             medias = medias[:amount]
         return (
-            [extract_media_v1(media) for media in medias],
+            [media for media in medias],
             next_max_id
         )
 
@@ -861,7 +861,7 @@ class MediaMixin:
             next_max_id = self.last_json.get("next_max_id", "")
         if amount:
             medias = medias[:amount]
-        return [extract_media_v1(media) for media in medias]
+        return [media for media in medias]
 
     def usertag_medias(self, user_id: int, amount: int = 0) -> List[Media]:
         """
