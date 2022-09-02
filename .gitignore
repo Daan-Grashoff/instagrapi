@@ -1,5 +1,6 @@
 /*.mp4
 /*.jpg
+/*.m4a
 # emacs
 *~
 .DS_Store
@@ -137,3 +138,6 @@ dmypy.json
 # PyCharm
 .idea
 *.iml
+
+# VSCode
+.vscode

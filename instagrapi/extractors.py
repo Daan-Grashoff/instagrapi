@@ -1,4 +1,6 @@
+import html
 import json
+import re
 from copy import deepcopy
 
 from .types import (
@@ -62,6 +64,9 @@ def extract_media_v1(data):
     )
     media["like_count"] = media.get("like_count", 0)
     media["has_liked"] = media.get("has_liked", False)
+    media["sponsor_tags"] = [
+        tag["sponsor"] for tag in media.get("sponsor_tags", [])
+    ]
     return Media(
         caption_text=(media.get("caption") or {}).get("text", ""),
         resources=[
@@ -126,6 +131,10 @@ def extract_media_gql(data):
             extract_resource_gql(edge["node"])
             for edge in media.get("edge_sidecar_to_children", {}).get("edges", [])
         ],
+        sponsor_tags=[
+            extract_user_short(edge['node']['sponsor'])
+            for edge in media.get("edge_media_to_sponsor_user", {}).get("edges", [])
+        ],
         **media,
     )
 
@@ -177,6 +186,8 @@ def extract_user_gql(data):
 def extract_user_v1(data):
     """For Private API"""
     data["external_url"] = data.get("external_url") or None
+    pic_hd = data.get("hd_profile_pic_url_info") or data.get("hd_profile_pic_versions")
+    data["profile_pic_url_hd"] = pic_hd.get("url")
     return User(**data)
 
 
@@ -195,9 +206,10 @@ def extract_location(data):
     address_json = data.get("address_json", "{}")
     if isinstance(address_json, str):
         address = json.loads(address_json)
-        data["address"] = address.get("street_address")
-        data["city"] = address.get("city_name")
-        data["zip"] = address.get("zip_code")
+        if isinstance(address, dict) and address:
+            data["address"] = address.get("street_address")
+            data["city"] = address.get("city_name")
+            data["zip"] = address.get("zip_code")
     return Location(**data)
 
 
@@ -295,13 +307,13 @@ def extract_account(data):
 
 def extract_hashtag_gql(data):
     data["media_count"] = data.get("edge_hashtag_to_media", {}).get("count")
-    data["profile_pic_url"] = data["profile_pic_url"] or None
+    data["profile_pic_url"] = data.get("profile_pic_url") or None
     return Hashtag(**data)
 
 
 def extract_hashtag_v1(data):
     data["allow_following"] = data.get("allow_following") == 1
-    data["profile_pic_url"] = data["profile_pic_url"] or None
+    data["profile_pic_url"] = data.get("profile_pic_url") or None
     return Hashtag(**data)
 
 
@@ -325,7 +337,7 @@ def extract_story_v1(data):
     ]
     story["locations"] = []
     story["hashtags"] = []
-    story["stickers"] = []
+    story["stickers"] = data.get('story_link_stickers') or []
     feed_medias = []
     story_feed_medias = data.get('story_feed_media') or []
     for feed_media in story_feed_medias:
@@ -337,6 +349,9 @@ def extract_story_v1(data):
         for link in cta.get("links", []):
             story["links"].append(StoryLink(**link))
     story["user"] = extract_user_short(story.get("user"))
+    story["sponsor_tags"] = [
+        tag["sponsor"] for tag in story.get("sponsor_tags", [])
+    ]
     return Story(**story)
 
 
@@ -376,6 +391,10 @@ def extract_story_gql(data):
     story["code"] = InstagramIdCodec.encode(story["pk"])
     story["taken_at"] = story["taken_at_timestamp"]
     story["media_type"] = 2 if story["is_video"] else 1
+    story["sponsor_tags"] = [
+        extract_user_short(edge['node']['sponsor'])
+        for edge in story.get("edge_media_to_sponsor_user", {}).get("edges", [])
+    ]
     return Story(**story)
 
 
@@ -390,4 +409,8 @@ def extract_highlight_v1(data):
 
 
 def extract_track(data):
+    data['cover_artwork_uri'] = data.get('cover_artwork_uri') or None
+    data['cover_artwork_thumbnail_uri'] = data.get('cover_artwork_thumbnail_uri') or None
+    items = re.findall(r"<BaseURL>(.+?)</BaseURL>", data['dash_manifest'])
+    data['uri'] = html.unescape(items[0]) if items else None
     return Track(**data)
