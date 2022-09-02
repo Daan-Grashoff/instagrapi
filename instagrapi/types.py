@@ -130,6 +130,7 @@ class Media(BaseModel):
     title: Optional[str] = ""
     resources: List[Resource] = []
     clips_metadata: dict = {}
+    is_paid_partnership: bool
 
 
 class MediaOembed(BaseModel):
